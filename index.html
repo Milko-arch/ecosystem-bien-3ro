@@ -22,6 +22,16 @@
                     fontFamily: {
                         sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
                         serif: ['Georgia', 'Times New Roman', 'serif']
+                    },
+                    keyframes: {
+                        shake: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '25%': { transform: 'translateX(-10px)' },
+                            '75%': { transform: 'translateX(10px)' },
+                        }
+                    },
+                    animation: {
+                        shake: 'shake 0.2s ease-in-out 0s 2'
                     }
                 }
             }
@@ -31,7 +41,7 @@
         .chart-container { position: relative; width: 100%; max-width: 600px; margin: auto; height: 350px; }
         .term-btn { transition: all 0.2s ease-in-out; position: relative; }
         .term-btn.viewed::before { content: '✓'; position: absolute; left: -10px; top: 50%; transform: translateY(-50%); background: #4A7C59; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white; z-index: 10; }
-        .term-btn.wrong-review { border-color: #ef4444 !important; color: #ef4444 !important; }
+        .term-btn.wrong-review { border-color: #ef4444 !important; color: #ef4444 !important; background-color: #fef2f2 !important; }
         .test-locked { filter: blur(4px); pointer-events: none; opacity: 0.5; }
         .test-unlocked { filter: blur(0); pointer-events: auto; opacity: 1; }
         .lock-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; background: rgba(247, 245, 240, 0.8); border-radius: 1rem; }
@@ -65,9 +75,31 @@
             align-items: center;
             justify-content: center;
         }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 100;
+            animation: fall 3s ease-out forwards;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(500px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .shake-screen { animation: shake 0.2s ease-in-out 0s 2; }
+        .bg-correct { background-color: #dcfce7 !important; transition: background-color 0.3s; }
+        .bg-wrong { background-color: #fee2e2 !important; transition: background-color 0.3s; }
     </style>
 </head>
-<body class="bg-eco-base text-eco-text font-sans antialiased min-h-screen">
+<body id="body-main" class="bg-eco-base text-eco-text font-sans antialiased min-h-screen">
 
     <!-- Modal para el nombre -->
     <div id="custom-modal">
@@ -205,6 +237,28 @@
             document.querySelector('nav').classList.remove('hidden');
             document.getElementById('certificate-output').innerHTML = '';
             scrollToSection('glossary');
+            currentQuestionIndex = 0;
+            correctAnswersCount = 0;
+            wrongTermIds = [];
+            renderVocabulary();
+        }
+
+        function createConfetti() {
+            const container = document.getElementById('active-question-container');
+            const colors = ['#4A7C59', '#D4AF37', '#E8DAB2', '#C17767', '#ffffff'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.top = '-10px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = Math.random() * 8 + 4 + 'px';
+                confetti.style.height = confetti.style.width;
+                confetti.style.animationDuration = Math.random() * 2 + 1 + 's';
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                container.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 3000);
+            }
         }
 
         function generateFinalCertificate() {
@@ -272,9 +326,20 @@
         ];
 
         const testQuestions = [
-            { id: 11, q: "All living things are also called...", a: "Organisms", options: ["Ecosystems", "Organisms", "Resources", "Populations"] },
-            { id: 8, q: "The place where a plant or animal lives is its...", a: "Habitat", options: ["Environment", "Habitat", "Community", "Biodiversity"] },
-            { id: 5, q: "All living and non-living elements interacting in a place are a/an...", a: "Ecosystem", options: ["Population", "Community", "Ecosystem", "Interaction"] }
+            { id: 1, q: "A trait or behavior that helps an organism survive is a/an...", a: "Adaptation", options: ["Environment", "Adaptation", "Behavior", "Resource"] },
+            { id: 2, q: "The way an animal acts in a particular situation is its...", a: "Behavior", options: ["Adaptation", "Behavior", "Interaction", "Population"] },
+            { id: 3, q: "Different species interacting in the same area form a...", a: "Community", options: ["Population", "Ecosystem", "Community", "Habitat"] },
+            { id: 4, q: "The variety of living things in an ecosystem is called...", a: "Biodiversity", options: ["Biodiversity", "Population", "Energy", "Pollution"] },
+            { id: 5, q: "All living and non-living things interacting in a place make a/an...", a: "Ecosystem", options: ["Habitat", "Environment", "Ecosystem", "Organism"] },
+            { id: 6, q: "The ability to cause change or perform work is...", a: "Energy", options: ["Resource", "Energy", "Interaction", "Non-Living"] },
+            { id: 7, q: "Everything that surrounds a living thing is its...", a: "Environment", options: ["Habitat", "Ecosystem", "Environment", "Community"] },
+            { id: 8, q: "The specific place where an organism lives is its...", a: "Habitat", options: ["Resource", "Habitat", "Population", "Non-Living"] },
+            { id: 9, q: "How living things act with each other or their surroundings is...", a: "Interaction", options: ["Behavior", "Interaction", "Adaptation", "Community"] },
+            { id: 10, q: "Sunlight, air, and rocks are examples of...", a: "Non-Living", options: ["Organisms", "Non-Living", "Resources", "Adaptations"] },
+            { id: 11, q: "Any living thing, like a fox or a tree, is a/an...", a: "Organism", options: ["Organism", "Population", "Species", "Community"] },
+            { id: 12, q: "Harmful substances added to the environment is called...", a: "Pollution", options: ["Energy", "Non-Living", "Pollution", "Interaction"] },
+            { id: 13, q: "All living things of the same species in an ecosystem are a...", a: "Population", options: ["Community", "Organism", "Population", "Biodiversity"] },
+            { id: 14, q: "Something in nature that is useful for living things is a...", a: "Resource", options: ["Resource", "Energy", "Pollution", "Adaptation"] }
         ];
 
         let currentQuestionIndex = 0;
@@ -330,18 +395,18 @@
             const container = document.getElementById('active-question-container');
             if(!container) return;
             const q = testQuestions[currentQuestionIndex];
-            if (!q) { showResultPrompt(); return; }
+            if (!q) { processResults(); return; }
             
             const prog = document.getElementById('quiz-progress');
             if(prog) prog.textContent = `Question ${currentQuestionIndex + 1}/${testQuestions.length}`;
             speakText(q.q);
 
             container.innerHTML = `
-                <div id="quiz-card" class="bg-white p-8 rounded-2xl shadow-lg border-4 border-eco-sand fade-in">
+                <div id="quiz-card" class="bg-white p-8 rounded-2xl shadow-lg border-4 border-eco-sand fade-in relative overflow-hidden">
                     <h3 class="text-2xl font-bold mb-6 text-eco-text">${q.q}</h3>
                     <div class="grid md:grid-cols-2 gap-4">
                         ${q.options.map(opt => `
-                            <button onclick="handleAnswer('${opt}')" class="option-btn p-4 border-2 border-gray-100 rounded-xl hover:border-eco-green hover:bg-eco-base transition-all text-left font-medium">
+                            <button onclick="handleAnswer('${opt}')" class="option-btn p-4 border-2 border-gray-100 rounded-xl hover:border-eco-green hover:bg-eco-base transition-all text-left font-medium bg-white">
                                 ${opt}
                             </button>
                         `).join('')}
@@ -353,27 +418,60 @@
         function handleAnswer(ans) {
             const q = testQuestions[currentQuestionIndex];
             const isCorrect = (ans === q.a);
+            const card = document.getElementById('quiz-card');
+            const main = document.getElementById('body-main');
             
             if (isCorrect) {
                 correctAnswersCount++;
                 speakText("Correct!");
+                card.classList.add('bg-correct');
+                createConfetti();
             } else {
                 speakText("Incorrect.");
+                card.classList.add('bg-wrong');
+                main.classList.add('shake-screen');
                 if (!wrongTermIds.includes(q.id)) wrongTermIds.push(q.id);
+                setTimeout(() => main.classList.remove('shake-screen'), 400);
             }
             
-            currentQuestionIndex++;
-            setTimeout(renderCurrentQuestion, 1000);
+            setTimeout(() => {
+                currentQuestionIndex++;
+                renderCurrentQuestion();
+            }, 1200);
         }
 
-        function showResultPrompt() {
+        function processResults() {
             const container = document.getElementById('active-question-container');
-            speakText("Test completed.");
-            container.innerHTML = `<div class="text-center p-10 bg-white rounded-xl shadow-lg border-2 border-eco-green">
-                <h3 class="text-3xl font-bold mb-4">Test Finished!</h3>
-                <p class="text-xl">You answered correctly.</p>
-                <button onclick="openNameModal()" class="mt-6 bg-eco-green text-white px-8 py-3 rounded-full font-bold">Claim Certificate</button>
-            </div>`;
+            const scorePercent = (correctAnswersCount / testQuestions.length) * 100;
+            const threshold = 80;
+
+            if (scorePercent >= threshold) {
+                speakText("Excellent work! You achieved " + Math.round(scorePercent) + " percent. You can now claim your certificate.");
+                container.innerHTML = `
+                    <div class="text-center p-10 bg-white rounded-xl shadow-lg border-4 border-eco-green fade-in">
+                        <div class="text-6xl mb-4">🏆</div>
+                        <h3 class="text-3xl font-bold mb-2 text-eco-green">Passed!</h3>
+                        <p class="text-xl mb-6 text-gray-600">Your score: ${Math.round(scorePercent)}% (${correctAnswersCount}/14)</p>
+                        <button onclick="openNameModal()" class="bg-eco-green text-white px-10 py-4 rounded-full font-bold shadow-xl hover:scale-105 transition-transform">
+                            Claim My Certificate
+                        </button>
+                    </div>
+                `;
+            } else {
+                speakText("You scored " + Math.round(scorePercent) + " percent. Please review the highlighted red terms in the glossary.");
+                renderVocabulary(); // Esto aplicará la clase .wrong-review (rojo)
+                container.innerHTML = `
+                    <div class="text-center p-10 bg-white rounded-xl shadow-lg border-4 border-eco-terra fade-in">
+                        <div class="text-6xl mb-4">📚</div>
+                        <h3 class="text-3xl font-bold mb-2 text-eco-terra">Keep Studying</h3>
+                        <p class="text-xl mb-6 text-gray-600">Your score: ${Math.round(scorePercent)}% (Needs 80%)</p>
+                        <p class="mb-6 text-gray-500 italic">Please review the terms marked in RED in the glossary above.</p>
+                        <button onclick="scrollToSection('glossary')" class="bg-eco-terra text-white px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition-transform">
+                            Back to Glossary
+                        </button>
+                    </div>
+                `;
+            }
         }
 
         function scrollToSection(id) { 
